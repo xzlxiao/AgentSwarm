@@ -1,0 +1,50 @@
+version: "3.8"
+
+services:
+  agent-swarm-gateway:
+    build:
+      context: .
+      dockerfile: docker/hermes-worker/Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app:/app/app
+      - ./worker:/app/worker
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017
+      - HERMES_API_BASE=${HERMES_API_BASE}
+      - HERMES_API_KEY=${HERMES_API_KEY}
+      - HERMES_MODEL=${HERMES_MODEL}
+      - SWARM_NETWORK_NAME=agentswarm-net
+    depends_on:
+      agent-swarm-mongodb:
+        condition: service_started
+    networks:
+      - agentswarm-net
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  agent-swarm-mongodb:
+    image: mongo:7.0
+    ports:
+      - "27017:27017"
+    volumes:
+      - agentswarm_mongo_data:/data/db
+      - ./docker/mongo-init:/docker-entrypoint-initdb.d
+    environment:
+      MONGO_INITDB_DATABASE: agentswarm
+    networks:
+      - agentswarm-net
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+networks:
+  agentswarm-net:
+    name: agentswarm-net
+
+volumes:
+  agentswarm_mongo_data:
+    name: agentswarm_mongo_data

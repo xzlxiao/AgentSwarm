@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+
+# Virtual environment
+.venv/
+venv/
+
+# Test / tool cache
+.pytest_cache/
+.mypy_cache/
+.basedpyright/
+
+# Environment
+.env
+
+# IDE
+.vscode/
+.idea/
+
+# OMC
+.omc
+
+# OS
+.DS_Store

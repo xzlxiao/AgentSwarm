@@ -1,0 +1,10 @@
+[project]
+name = "agentswarm"
+version = "0.1.0"
+description = "Enterprise-grade multi-agent operating system"
+license = "AGPL-3.0-or-later"
+requires-python = ">=3.12"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

@@ -1,0 +1,25 @@
+from functools import lru_cache
+
+from pydantic_settings import BaseSettings
+
+
+class Settings(BaseSettings):
+    mongo_uri: str = "mongodb://mongodb:27017"
+    mongo_db_name: str = "agentswarm"
+    hermes_api_base: str = ""
+    hermes_api_key: str = ""
+    hermes_model: str = "hunyuan-2.0-instruct-20251111"
+    swarm_network_name: str = "agentswarm-net"
+    gateway_host: str = "0.0.0.0"
+    gateway_port: int = 8000
+    log_level: str = "info"
+
+    model_config = {
+        "env_file": ".env",
+        "env_file_encoding": "utf-8",
+    }
+
+
+@lru_cache(maxsize=1)
+def get_settings() -> Settings:
+    return Settings()
