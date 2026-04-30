@@ -19,6 +19,7 @@ class SwarmManager:
         environment = {
             "GATEWAY_URL": f"http://gateway:{self._settings.gateway_port}",
             "AGENT_NODE_ID": node.node_id,
+            "AGENT_INTERNAL_KEY": self._settings.agent_internal_key,
         }
         volumes = {workspace.volume_name: {"bind": "/workspace", "mode": "rw"}}
 

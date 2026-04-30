@@ -9,6 +9,7 @@ from app.core.exceptions import AgentSwarmError, agentswarm_error_handler
 from app.core.logging import configure_logging
 from app.api.router import router
 from app.services.gateway_service import GatewayService
+from app.swarm.manager import SwarmManager
 
 
 @asynccontextmanager
@@ -21,6 +22,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         app.state.mongo_client = client
         app.state.db = db
         app.state.gateway_service = GatewayService(db, settings)
+        app.state.swarm_manager = SwarmManager(settings)
+        if settings.agent_internal_key == "default-internal-key":
+            from app.core.logging import get_logger
+            get_logger(__name__).warning(
+                "security_warning",
+                message="Using default agent_internal_key — set AGENT_INTERNAL_KEY env var in production",
+            )
         yield
         await app.state.gateway_service.close()
 

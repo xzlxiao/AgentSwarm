@@ -10,6 +10,10 @@ class AgentSwarmError(Exception):
     status_code: int = 500
     detail: str = "Internal server error"
 
+    def __init__(self, detail: str | None = None) -> None:
+        self.detail = detail or self.detail
+        super().__init__(self.detail)
+
 
 class AgentNotFoundError(AgentSwarmError):
     status_code = 404
@@ -34,6 +38,11 @@ class ContainerError(AgentSwarmError):
 class WorkerRegistrationError(AgentSwarmError):
     status_code = 503
     detail = "Worker registration failed"
+
+
+class InvalidStatusTransition(AgentSwarmError):
+    status_code = 400
+    detail = "Invalid status transition"
 
 
 async def agentswarm_error_handler(request: Request, exc: AgentSwarmError) -> JSONResponse:

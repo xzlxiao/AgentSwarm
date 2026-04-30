@@ -7,6 +7,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+RUN chmod +x /app/docker/hermes-worker/entrypoint.sh
+
 EXPOSE 3000
 
-CMD ["uvicorn", "worker.main:app", "--host", "0.0.0.0", "--port", "3000"]
+ENTRYPOINT ["/app/docker/hermes-worker/entrypoint.sh"]

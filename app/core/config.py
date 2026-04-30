@@ -12,6 +12,8 @@ class Settings(BaseSettings):
     swarm_network_name: str = "agentswarm-net"
     gateway_host: str = "0.0.0.0"
     gateway_port: int = 8000
+    agent_internal_key: str = "default-internal-key"
+    snapshot_base_dir: str = "./snapshots"
     log_level: str = "info"
 
     model_config = {

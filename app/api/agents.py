@@ -1,14 +1,22 @@
-from fastapi import APIRouter, Depends, Request
+from typing import Literal
 
-from app.core.exceptions import AgentNotFoundError, AgentSwarmError
+from fastapi import APIRouter, Depends, Request
+from pydantic import BaseModel
+
+from app.core.exceptions import AgentNotFoundError
 from app.models.agent_node import AgentNodeDoc, CreateAgentNodeRequest, WorkerRegisterRequest
 from app.services.agent_service import AgentService
 
 router = APIRouter(prefix="/api/v1/agents", tags=["agents"])
 
 
+class UpdateStatusRequest(BaseModel):
+    status: Literal["running", "paused", "destroyed"]
+
+
 def _get_agent_service(request: Request) -> AgentService:
-    return AgentService(request.app.state.db)
+    swarm_manager = request.app.state.swarm_manager if hasattr(request.app.state, "swarm_manager") else None
+    return AgentService(request.app.state.db, swarm_manager)
 
 
 @router.post("", status_code=201)
@@ -43,13 +51,10 @@ async def list_agents(
 @router.patch("/{node_id}")
 async def update_agent_status(
     node_id: str,
-    body: dict[str, object],
+    body: UpdateStatusRequest,
     service: AgentService = Depends(_get_agent_service),
 ) -> AgentNodeDoc:
-    status = body.get("status")
-    if not isinstance(status, str):
-        raise AgentSwarmError()
-    return await service.update_status(node_id, status)
+    return await service.update_status(node_id, body.status)
 
 
 @router.delete("/{node_id}")
