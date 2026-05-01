@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     agent_internal_key: str = "default-internal-key"
     snapshot_base_dir: str = "./snapshots"
     log_level: str = "info"
+    lock_reclaim_interval_seconds: int = 30
+    default_lock_timeout_seconds: int = 600
 
     model_config = {
         "env_file": ".env",

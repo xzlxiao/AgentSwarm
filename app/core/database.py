@@ -26,6 +26,7 @@ async def ensure_indexes(db: AsyncDatabase[_DocType]) -> None:
     await db["project_workspaces"].create_index("status")
     await db["token_usage"].create_index("agent_node_id")
     await db["token_usage"].create_index("request_id", unique=True)
+    await db["workspace_locks"].create_index("workspace_id", unique=True)
 
 
 @asynccontextmanager

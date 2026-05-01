@@ -112,6 +112,32 @@ REMOTE_TOOLS: list[types.Tool] = [
             "required": ["workspace_id"],
         },
     ),
+    types.Tool(
+        name="acquire_lock",
+        description="获取工作区独占锁（回调 Gateway）",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "workspace_id": {"type": "string", "description": "工作区 ID"},
+                "node_id": {"type": "string", "description": "Agent node ID"},
+                "container_id": {"type": "string", "description": "容器 ID"},
+                "timeout_seconds": {"type": "integer", "description": "超时秒数，默认 600"},
+            },
+            "required": ["workspace_id", "node_id", "container_id"],
+        },
+    ),
+    types.Tool(
+        name="release_lock",
+        description="释放工作区独占锁（回调 Gateway）",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "workspace_id": {"type": "string", "description": "工作区 ID"},
+                "node_id": {"type": "string", "description": "Agent node ID"},
+            },
+            "required": ["workspace_id", "node_id"],
+        },
+    ),
 ]
 
 ALL_TOOLS = LOCAL_TOOLS + REMOTE_TOOLS
@@ -195,6 +221,27 @@ async def _handle_list_agents(arguments: dict[str, object]) -> list[types.TextCo
     return _text(json.dumps(agents))
 
 
+async def _handle_acquire_lock(arguments: dict[str, object]) -> list[types.TextContent]:
+    gateway = _get_gateway()
+    timeout = arguments.get("timeout_seconds")
+    result = await gateway.acquire_lock(
+        _arg(arguments, "workspace_id"),
+        _arg(arguments, "node_id"),
+        _arg(arguments, "container_id"),
+        int(str(timeout)) if timeout is not None else None,
+    )
+    return _text(json.dumps(result))
+
+
+async def _handle_release_lock(arguments: dict[str, object]) -> list[types.TextContent]:
+    gateway = _get_gateway()
+    result = await gateway.release_lock(
+        _arg(arguments, "workspace_id"),
+        _arg(arguments, "node_id"),
+    )
+    return _text(json.dumps(result))
+
+
 _ToolHandler = Callable[[dict[str, object]], Awaitable[list[types.TextContent]]]
 
 _DISPATCH_TABLE: dict[str, _ToolHandler] = {
@@ -206,6 +253,8 @@ _DISPATCH_TABLE: dict[str, _ToolHandler] = {
     "restore": _handle_restore,
     "spawn_agent": _handle_spawn_agent,
     "list_agents": _handle_list_agents,
+    "acquire_lock": _handle_acquire_lock,
+    "release_lock": _handle_release_lock,
 }
 
 

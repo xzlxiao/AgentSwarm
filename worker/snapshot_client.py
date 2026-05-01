@@ -49,5 +49,32 @@ class GatewayClient:
         resp.raise_for_status()
         return resp.json()
 
+    async def acquire_lock(
+        self, workspace_id: str, node_id: str, container_id: str, timeout_seconds: int | None = None,
+    ) -> dict[str, object]:
+        payload: dict[str, object] = {
+            "workspace_id": workspace_id,
+            "node_id": node_id,
+            "container_id": container_id,
+        }
+        if timeout_seconds is not None:
+            payload["timeout_seconds"] = timeout_seconds
+        resp = await self._client.post(
+            f"{self._base_url}/api/v1/internal/locks/acquire",
+            json=payload,
+            headers=self._headers(),
+        )
+        resp.raise_for_status()
+        return resp.json()
+
+    async def release_lock(self, workspace_id: str, node_id: str) -> dict[str, object]:
+        resp = await self._client.post(
+            f"{self._base_url}/api/v1/internal/locks/release",
+            json={"workspace_id": workspace_id, "node_id": node_id},
+            headers=self._headers(),
+        )
+        resp.raise_for_status()
+        return resp.json()
+
     async def aclose(self) -> None:
         await self._client.aclose()

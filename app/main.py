@@ -1,3 +1,4 @@
+import asyncio
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
@@ -6,10 +7,25 @@ from fastapi import FastAPI
 from app.core.config import get_settings
 from app.core.database import ensure_indexes, get_database, mongo_lifespan
 from app.core.exceptions import AgentSwarmError, agentswarm_error_handler
-from app.core.logging import configure_logging
+from app.core.logging import configure_logging, get_logger
 from app.api.router import router
 from app.services.gateway_service import GatewayService
+from app.services.lock_service import LockService
+from app.services.snapshot_service import SnapshotService
 from app.swarm.manager import SwarmManager
+
+logger = get_logger(__name__)
+
+
+async def _reclaim_loop(lock_service: LockService, interval: int) -> None:
+    while True:
+        await asyncio.sleep(interval)
+        try:
+            reclaimed = await lock_service.reclaim_expired_locks()
+            if reclaimed > 0:
+                logger.info("locks_reclaimed", count=reclaimed)
+        except Exception:
+            logger.error("reclaim_loop_error", exc_info=True)
 
 
 @asynccontextmanager
@@ -24,13 +40,26 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         app.state.db = db
         app.state.gateway_service = GatewayService(db, settings)
         app.state.swarm_manager = SwarmManager(settings)
+
+        snapshot_service = SnapshotService(settings)
+        lock_service = LockService(db, snapshot_service, settings, app.state.swarm_manager)
+        app.state.lock_service = lock_service
+
+        reclaim_task = asyncio.create_task(
+            _reclaim_loop(lock_service, settings.lock_reclaim_interval_seconds)
+        )
+
         if settings.agent_internal_key == "default-internal-key":
-            from app.core.logging import get_logger
-            get_logger(__name__).warning(
+            logger.warning(
                 "security_warning",
                 message="Using default agent_internal_key — set AGENT_INTERNAL_KEY env var in production",
             )
         yield
+        reclaim_task.cancel()
+        try:
+            await reclaim_task
+        except asyncio.CancelledError:
+            pass
         await app.state.gateway_service.close()
 
 

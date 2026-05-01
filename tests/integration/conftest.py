@@ -1,6 +1,6 @@
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import Any
+from typing import Any, cast
 from unittest.mock import MagicMock
 import tempfile
 
@@ -8,12 +8,14 @@ import pytest
 from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
 
+from app.core.config import Settings
 from app.core.exceptions import AgentSwarmError, agentswarm_error_handler
 from app.core.logging import configure_logging
 from app.api.router import router
-from app.api.workspaces import _get_workspace_service, WorkspaceService
+from app.api.workspaces import _get_workspace_service, WorkspaceService  # pyright: ignore[reportPrivateUsage]
 from app.services.gateway_service import GatewayService
 from app.swarm.volume import VolumeManager
+from tests.conftest import AsyncMockDatabase
 
 
 class _MockHermesResponse:
@@ -47,14 +49,14 @@ def mock_hermes_data() -> dict[str, object]:
 
 
 @pytest.fixture
-def gateway_client(mock_db, mock_settings, mock_hermes_data):
+def gateway_client(mock_db: AsyncMockDatabase, mock_settings: Settings, mock_hermes_data: dict[str, object]):
     configure_logging("warning")
 
     mock_vm = MagicMock(spec=VolumeManager)
     mock_vm.create_workspace_volume.return_value = "agentswarm-ws-test"
 
-    gw = GatewayService(mock_db, mock_settings)
-    gw._client = _MockHttpxClient(mock_hermes_data)
+    gw = GatewayService(cast(Any, mock_db), mock_settings)
+    cast(Any, gw)._client = _MockHttpxClient(mock_hermes_data)
 
     @asynccontextmanager
     async def test_lifespan(app: FastAPI) -> AsyncGenerator[None, None]:

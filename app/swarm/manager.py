@@ -14,6 +14,10 @@ class SwarmManager:
         self._settings = settings
         self._client = docker.from_env()
 
+    @property
+    def client(self) -> docker.DockerClient:
+        return self._client
+
     def spawn_agent(self, node: AgentNodeDoc, workspace: ProjectWorkspaceDoc) -> str:
         container_name = f"worker-{node.node_id[:8]}"
         environment = {

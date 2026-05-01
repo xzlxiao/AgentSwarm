@@ -2,8 +2,10 @@
 
 import time
 
+from fastapi.testclient import TestClient
 
-def test_e2e_6step_pipeline(gateway_client, worker_client):
+
+def test_e2e_6step_pipeline(gateway_client: TestClient, worker_client: TestClient):
     """完整 E2E 链路: workspace -> agent -> register -> chat -> task -> status."""
 
     # Step 1: POST /api/v1/workspaces -> 201
