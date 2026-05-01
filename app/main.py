@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.core.config import get_settings
-from app.core.database import get_database, mongo_lifespan
+from app.core.database import ensure_indexes, get_database, mongo_lifespan
 from app.core.exceptions import AgentSwarmError, agentswarm_error_handler
 from app.core.logging import configure_logging
 from app.api.router import router
@@ -19,6 +19,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     async with mongo_lifespan(settings) as client:
         db = get_database(client, settings)
+        await ensure_indexes(db)
         app.state.mongo_client = client
         app.state.db = db
         app.state.gateway_service = GatewayService(db, settings)

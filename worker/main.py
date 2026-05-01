@@ -34,8 +34,9 @@ async def _register_with_gateway(app: FastAPI) -> None:
                 resp = await client.post(
                     register_url,
                     json={
-                        "container_id": "local",
+                        "container_id": settings.container_name or "local",
                         "container_ip": "127.0.0.1",
+                        "container_hostname": settings.container_name,
                         "container_port": 3000,
                     },
                 )

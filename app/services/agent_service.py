@@ -96,6 +96,7 @@ class AgentService:
             {"$set": {
                 "container_id": request.container_id,
                 "container_ip": request.container_ip,
+                "container_hostname": request.container_hostname,
                 "container_port": request.container_port,
                 "status": "running",
                 "updated_at": datetime.now(UTC),

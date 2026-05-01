@@ -14,6 +14,7 @@ class AgentNodeDoc(MongoModel):
     container_id: str | None = None
     container_ip: str | None = None
     container_port: int | None = None
+    container_hostname: str | None = None
     volume_mount_path: str | None = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
@@ -28,4 +29,5 @@ class CreateAgentNodeRequest(MongoModel):
 class WorkerRegisterRequest(MongoModel):
     container_id: str = Field(..., description="Docker 容器 ID")
     container_ip: str = Field(..., description="Worker 容器 IP")
+    container_hostname: str = ""
     container_port: int = 3000

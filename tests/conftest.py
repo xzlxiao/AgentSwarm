@@ -42,6 +42,9 @@ class _AsyncMockCollection:
     async def count_documents(self, filter: Any) -> int:
         return self._sync.count_documents(filter)
 
+    async def create_index(self, *args: Any, **kwargs: Any) -> None:
+        pass
+
 
 class AsyncMockDatabase:
     def __init__(self, sync_db: Any) -> None:

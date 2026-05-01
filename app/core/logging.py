@@ -3,8 +3,17 @@ import logging
 import structlog
 
 
+_LOG_LEVELS: dict[str, int] = {
+    "DEBUG": logging.DEBUG,
+    "INFO": logging.INFO,
+    "WARNING": logging.WARNING,
+    "ERROR": logging.ERROR,
+    "CRITICAL": logging.CRITICAL,
+}
+
+
 def configure_logging(log_level: str = "info") -> None:
-    level = getattr(logging, log_level.upper(), logging.INFO)
+    level = _LOG_LEVELS.get(log_level.upper(), logging.INFO)
 
     structlog.configure(
         processors=[

@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from app.core.exceptions import AgentNotFoundError
 from app.models.agent_node import AgentNodeDoc, CreateAgentNodeRequest, WorkerRegisterRequest
 from app.services.agent_service import AgentService
+from app.swarm.manager import SwarmManager
 
 router = APIRouter(prefix="/api/v1/agents", tags=["agents"])
 
@@ -15,7 +16,10 @@ class UpdateStatusRequest(BaseModel):
 
 
 def _get_agent_service(request: Request) -> AgentService:
-    swarm_manager = request.app.state.swarm_manager if hasattr(request.app.state, "swarm_manager") else None
+    try:
+        swarm_manager: SwarmManager | None = request.app.state.swarm_manager
+    except AttributeError:
+        swarm_manager = None
     return AgentService(request.app.state.db, swarm_manager)
 
 

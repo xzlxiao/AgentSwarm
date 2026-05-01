@@ -6,3 +6,4 @@ class WorkerTaskPayload(BaseModel):
     task_type: str = Field(..., description="任务类型标识符")
     instructions: str = Field(..., description="任务指令描述")
     output_path: str = Field(..., description="输出文件路径")
+    input_files: list[str] = Field(default_factory=list, description="输入文件路径列表")

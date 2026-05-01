@@ -17,6 +17,8 @@ services:
       - HERMES_API_KEY=${HERMES_API_KEY}
       - HERMES_MODEL=${HERMES_MODEL}
       - SWARM_NETWORK_NAME=agentswarm-net
+      - AGENT_INTERNAL_KEY=${AGENT_INTERNAL_KEY:-default-internal-key}
+      - SNAPSHOT_BASE_DIR=${SNAPSHOT_BASE_DIR:-./snapshots}
     depends_on:
       agent-swarm-mongodb:
         condition: service_started
