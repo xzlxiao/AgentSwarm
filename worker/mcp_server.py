@@ -138,6 +138,32 @@ REMOTE_TOOLS: list[types.Tool] = [
             "required": ["workspace_id", "node_id"],
         },
     ),
+    types.Tool(
+        name="reject_to_previous_node",
+        description="驳回上一个 Agent 的输出，回滚快照并注入反馈（回调 Gateway）",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "workspace_id": {"type": "string", "description": "工作区 ID"},
+                "reviewer_node_id": {"type": "string", "description": "当前审查者 node_id"},
+                "reason": {"type": "string", "description": "驳回原因"},
+                "max_rejects": {"type": "integer", "description": "最大驳回次数，默认 3", "default": 3},
+            },
+            "required": ["workspace_id", "reviewer_node_id", "reason"],
+        },
+    ),
+    types.Tool(
+        name="get_feedback",
+        description="获取当前 Agent 待处理的反馈记录（回调 Gateway）",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "workspace_id": {"type": "string", "description": "工作区 ID"},
+                "node_id": {"type": "string", "description": "Agent node_id"},
+            },
+            "required": ["workspace_id", "node_id"],
+        },
+    ),
 ]
 
 ALL_TOOLS = LOCAL_TOOLS + REMOTE_TOOLS
@@ -242,6 +268,27 @@ async def _handle_release_lock(arguments: dict[str, object]) -> list[types.TextC
     return _text(json.dumps(result))
 
 
+async def _handle_reject_to_previous_node(arguments: dict[str, object]) -> list[types.TextContent]:
+    gateway = _get_gateway()
+    max_rejects = arguments.get("max_rejects")
+    result = await gateway.reject_to_previous_node(
+        _arg(arguments, "workspace_id"),
+        _arg(arguments, "reviewer_node_id"),
+        _arg(arguments, "reason"),
+        int(str(max_rejects)) if max_rejects is not None else 3,
+    )
+    return _text(json.dumps(result))
+
+
+async def _handle_get_feedback(arguments: dict[str, object]) -> list[types.TextContent]:
+    gateway = _get_gateway()
+    result = await gateway.get_feedback(
+        _arg(arguments, "workspace_id"),
+        _arg(arguments, "node_id"),
+    )
+    return _text(json.dumps(result))
+
+
 _ToolHandler = Callable[[dict[str, object]], Awaitable[list[types.TextContent]]]
 
 _DISPATCH_TABLE: dict[str, _ToolHandler] = {
@@ -255,6 +302,8 @@ _DISPATCH_TABLE: dict[str, _ToolHandler] = {
     "list_agents": _handle_list_agents,
     "acquire_lock": _handle_acquire_lock,
     "release_lock": _handle_release_lock,
+    "reject_to_previous_node": _handle_reject_to_previous_node,
+    "get_feedback": _handle_get_feedback,
 }
 
 

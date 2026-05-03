@@ -9,7 +9,7 @@ from app.core.config import Settings
 from app.core.exceptions import LockNotFoundError, NotLockHolderError
 from app.core.logging import get_logger
 from app.models.base import model_to_mongo_doc
-from app.models.workspace_lock import WaitQueueEntry, WorkspaceLockDoc
+from app.models.workspace_lock import LockHistoryEntry, WaitQueueEntry, WorkspaceLockDoc
 from app.services.snapshot_service import SnapshotService
 from app.swarm.manager import SwarmManager
 
@@ -156,6 +156,15 @@ class LockService:
         queue = cast(list[dict[str, object]], current.get("wait_queue", []))
         now = datetime.now(UTC)
 
+        # 构建锁历史条目
+        history_entry = LockHistoryEntry(
+            node_id=node_id,
+            container_id=cast(str | None, current.get("holder_container_id")) or "",
+            acquired_at=cast(datetime, current.get("acquired_at")),
+            released_at=now,
+            snapshot_id=snapshot_id,
+        )
+
         if queue:
             next_entry = queue[0]
             next_node_id = cast(str, next_entry.get("node_id"))
@@ -173,6 +182,7 @@ class LockService:
                         "updated_at": now,
                     },
                     "$pop": {"wait_queue": -1},
+                    "$push": {"lock_history": {"$each": [history_entry.model_dump()], "$slice": -50}},
                 },
                 return_document=ReturnDocument.AFTER,
             )
@@ -189,6 +199,7 @@ class LockService:
                         "snapshot_id": snapshot_id,
                         "updated_at": now,
                     },
+                    "$push": {"lock_history": {"$each": [history_entry.model_dump()], "$slice": -50}},
                 },
                 return_document=ReturnDocument.AFTER,
             )
@@ -219,6 +230,10 @@ class LockService:
         reclaimed = 0
 
         async for doc in self._db[_COLLECTION].find({"status": "locked"}):
+            # 操作守卫：reject 等操作期间禁止 reclaim
+            if doc.get("locked_by_operation") is not None:
+                continue
+
             timeout = cast(int, doc.get("timeout_seconds", self._settings.default_lock_timeout_seconds))
             last_hb = cast(datetime | None, doc.get("last_heartbeat_at"))
             if last_hb is None:
@@ -309,6 +324,18 @@ class LockService:
             logger.info("lock_reclaimed", workspace_id=workspace_id, expired_node=node_id)
 
         return reclaimed
+
+    async def get_previous_holder(self, workspace_id: str, current_node_id: str) -> dict[str, object] | None:
+        """通过 lock_history 动态追溯上一个持锁 Agent（排除自身）。"""
+        doc = await self._db[_COLLECTION].find_one({"workspace_id": workspace_id})
+        if doc is None:
+            return None
+        history = cast(list[dict[str, object]], doc.get("lock_history", []))
+        for entry in reversed(history):
+            entry_node = cast(str, entry.get("node_id"))
+            if entry_node != current_node_id:
+                return entry
+        return None
 
     async def get_lock_status(self, workspace_id: str) -> dict[str, object]:
         raw = await self._db[_COLLECTION].find_one({"workspace_id": workspace_id})

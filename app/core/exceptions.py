@@ -60,6 +60,21 @@ class LockNotFoundError(AgentSwarmError):
     detail = "Lock not found"
 
 
+class RejectCountExceededError(AgentSwarmError):
+    status_code = 400
+    detail = "Maximum reject count exceeded for this target"
+
+
+class NoPreviousNodeError(AgentSwarmError):
+    status_code = 404
+    detail = "No previous node found in lock history"
+
+
+class RejectTargetNotFoundError(AgentSwarmError):
+    status_code = 404
+    detail = "Reject target agent not found"
+
+
 async def agentswarm_error_handler(request: Request, exc: AgentSwarmError) -> JSONResponse:
     logger.error("request_error", error=exc.detail, status_code=exc.status_code, path=request.url.path)
     return JSONResponse(

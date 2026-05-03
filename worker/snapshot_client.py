@@ -76,5 +76,30 @@ class GatewayClient:
         resp.raise_for_status()
         return resp.json()
 
+    async def reject_to_previous_node(
+        self, workspace_id: str, reviewer_node_id: str, reason: str, max_rejects: int = 3,
+    ) -> dict[str, object]:
+        resp = await self._client.post(
+            f"{self._base_url}/api/v1/internal/reject",
+            json={
+                "workspace_id": workspace_id,
+                "reviewer_node_id": reviewer_node_id,
+                "reason": reason,
+                "max_rejects": max_rejects,
+            },
+            headers=self._headers(),
+        )
+        resp.raise_for_status()
+        return resp.json()
+
+    async def get_feedback(self, workspace_id: str, node_id: str) -> dict[str, object | None]:
+        resp = await self._client.post(
+            f"{self._base_url}/api/v1/internal/feedback",
+            json={"workspace_id": workspace_id, "node_id": node_id},
+            headers=self._headers(),
+        )
+        resp.raise_for_status()
+        return resp.json()
+
     async def aclose(self) -> None:
         await self._client.aclose()

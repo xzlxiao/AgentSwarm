@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, cast
 from unittest.mock import MagicMock
 
 import mongomock
@@ -26,7 +26,7 @@ class _AsyncMockCollection:
     def __init__(self, sync_collection: Any) -> None:
         self._sync = sync_collection
 
-    async def find_one(self, filter: Any = None) -> dict[str, object] | None:
+    async def find_one(self, filter: Any = None, **kwargs: Any) -> dict[str, object] | None:
         return self._sync.find_one(filter)
 
     async def insert_one(self, document: dict[str, object]) -> Any:
@@ -37,6 +37,33 @@ class _AsyncMockCollection:
         return _AsyncMockCursor(docs)
 
     async def find_one_and_update(self, filter: Any, update: Any, **kwargs: Any) -> dict[str, object] | None:
+        # mongomock 不支持 $push + $slice，需要手动处理
+        push_ops = update.get("$push")
+        if push_ops:
+            for field, op in push_ops.items():
+                if isinstance(op, dict) and "$each" in op and "$slice" in op:
+                    doc = self._sync.find_one(filter)
+                    if doc is None:
+                        return None
+                    arr: list[Any] = doc.get(field, [])
+                    items: list[Any] = cast(list[Any], op["$each"])
+                    arr.extend(items)
+                    slice_val: int = cast(int, op["$slice"])
+                    if slice_val < 0:
+                        arr = arr[slice_val:]
+                    elif slice_val > 0:
+                        arr = arr[:slice_val]
+                    else:
+                        arr = []
+                    self._sync.update_one(filter, {"$set": {field: arr}})
+                    # 移除已手动处理的字段，剩余操作交给 mongomock
+                    remaining_push: dict[str, Any] = {k: v for k, v in push_ops.items() if not (isinstance(v, dict) and "$each" in v and "$slice" in v)}
+                    if remaining_push:
+                        update = dict(update)
+                        update["$push"] = remaining_push
+                    else:
+                        update = {k: v for k, v in update.items() if k != "$push"}
+                    break
         return self._sync.find_one_and_update(filter, update, **kwargs)
 
     async def count_documents(self, filter: Any) -> int:

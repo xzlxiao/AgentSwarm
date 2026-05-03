@@ -9,8 +9,10 @@ from app.core.database import ensure_indexes, get_database, mongo_lifespan
 from app.core.exceptions import AgentSwarmError, agentswarm_error_handler
 from app.core.logging import configure_logging, get_logger
 from app.api.router import router
+from app.services.agent_service import AgentService
 from app.services.gateway_service import GatewayService
 from app.services.lock_service import LockService
+from app.services.reject_service import RejectService
 from app.services.snapshot_service import SnapshotService
 from app.swarm.manager import SwarmManager
 
@@ -44,6 +46,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         snapshot_service = SnapshotService(settings)
         lock_service = LockService(db, snapshot_service, settings, app.state.swarm_manager)
         app.state.lock_service = lock_service
+
+        agent_service = AgentService(db, app.state.swarm_manager)
+        reject_service = RejectService(db, lock_service, snapshot_service, agent_service, app.state.swarm_manager, settings)
+        app.state.reject_service = reject_service
 
         reclaim_task = asyncio.create_task(
             _reclaim_loop(lock_service, settings.lock_reclaim_interval_seconds)

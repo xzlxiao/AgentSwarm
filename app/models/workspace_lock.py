@@ -13,6 +13,16 @@ class WaitQueueEntry(BaseModel):
     enqueued_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
+class LockHistoryEntry(BaseModel):
+    """锁获取历史条目，用于动态追溯前驱 Agent。"""
+
+    node_id: str = Field(..., description="持锁 Agent node_id")
+    container_id: str = Field(..., description="持锁时容器 ID")
+    acquired_at: datetime = Field(...)
+    released_at: datetime | None = Field(default=None, description="锁释放时间")
+    snapshot_id: str | None = Field(default=None, description="释放时创建的快照 ID")
+
+
 class WorkspaceLockDoc(MongoModel):
     """Workspace 独占锁文档，每个 workspace 一条。"""
 
@@ -25,6 +35,8 @@ class WorkspaceLockDoc(MongoModel):
     timeout_seconds: int = Field(default=600, description="锁超时阈值（秒）")
     wait_queue: list[WaitQueueEntry] = Field(default_factory=list, description="等待队列")
     snapshot_id: str | None = Field(default=None, description="最近一次快照 ID")
+    lock_history: list[LockHistoryEntry] = Field(default_factory=list, description="锁获取历史（动态追溯前驱）")
+    locked_by_operation: str | None = Field(default=None, description="操作守卫：reject 期间阻止 reclaim")
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
